@@ -8,13 +8,80 @@
 const app = getApp()
 import ImageSynthesis from '../../utils/image-synthesis.js';
 import Notification from '../../utils/react-whc-notification.js';
+
+const resourceBaseUrl = 'https://7765-wechatapp-static-res-3bx7168bd89-1307460930.tcb.qcloud.la/';
+
+function login() {
+  return new Promise(function (resolve, reject) {
+    wx.login({
+      success: () => {
+        resolve();
+      },
+      fail: err => {
+        reject(err);
+      }
+    });
+  })
+}
+
+function getUserInfo() {
+  return new Promise(function (resolve, reject) {
+    wx.getUserProfile({
+      desc: '需要获得您的头像以对其修饰。',
+      success: profileRes => {
+        resolve(profileRes.userInfo)
+      },
+      fail: err => {
+        reject(err);
+      }
+    });
+  })
+}
+
+function authorize() {
+  const loginPromise = login();
+  const getUserInfoPromise = getUserInfo();
+  return Promise.all([loginPromise, getUserInfoPromise]);
+}
+
+function retrieveImages() {
+  return new Promise(function (resolve, reject) {
+    wx.request({
+      url: resourceBaseUrl + "images.json",
+      data: {
+        noncestr: Date.now()
+      },
+      success: function (result) {
+        resolve(result.data);
+      },
+      fail: function (err) {
+        console.error(err)
+      }
+    })
+  });
+}
+
+function downloadAsTempFile(url) {
+  return new Promise(function (resolve, reject) {
+    wx.downloadFile({
+      url,
+      success: (res) => {
+        resolve(res.tempFilePath);
+      },
+      fail: (res) => {
+        reject(res);
+      },
+    });
+  });
+}
+
 Page({
   data: {
     didShow: false,
     isTouchScale: false,
     makePosterImage: false,
     festivalSrc: '',
-    oldx:0,
+    oldx: 0,
     oldy: 0,
     startx: 0,
     starty: 0,
@@ -22,43 +89,39 @@ Page({
     rotate: 0,
     loading: false,
     callback: null,
-    logoPath: null,
-    currentFestival: '圣诞',
+    baseImagePath: null,
+    overlayImagePath: null,
+    currentFestival: null,
     userInfo: {},
     olduserInfo: {},
     hasScale: false,
     hasRotate: false,
     hasUserInfo: false,
     isOpenSetting: false,
-    canIUse: wx.canIUse('button.open-type.getUserInfo'),
     festivalCenterX: 0,
     festivalCenterY: 0,
-    festivalLeft: 120,
-    festivalTop: 120,
+    festivalLeft: 0,
+    festivalTop: 0,
     offsetx: 0,
     offsety: 0,
     festivalSize: 80,
     festivalIndex: 0,
     festivalImageIndex: 0,
-    festivalNames: [
-      '圣诞',
-      '春节',
-      '元宵',
-      '国庆',
-      '1024',
-      '女神节'
-    ],
-    icons: {
-      '圣诞': [],
-      '春节': [],
-      '元宵': [],
-      '国庆': [],
-      '1024': [],
-      '女神节': [],
-    },
+    festivalNames: [],
+    icons: {},
   },
-
-  _reset: function(e) {
+  getUserProfile: function () {
+    const self = this;
+    authorize().then(function (res) {
+      const userInfo = res[1];
+      console.info(JSON.stringify(userInfo));
+      app.globalData.userInfo = userInfo;
+      self._saveUserInfo(userInfo);
+    }).catch((err) => {
+      console.error(err);
+    });
+  },
+  _reset: function (e) {
     const {
       olduserInfo
     } = this.data;
@@ -68,8 +131,8 @@ Page({
       hasRotate: false,
       festivalCenterX: 0,
       festivalCenterY: 0,
-      festivalLeft: 120,
-      festivalTop: 120,
+      festivalLeft: 0,
+      festivalTop: 0,
       offsetx: 0,
       offsety: 0,
       festivalSize: 80,
@@ -79,12 +142,15 @@ Page({
       starty: 0,
       initRotate: 0,
       rotate: 0,
-      logoPath: null,
-      userInfo: { ...olduserInfo},
+      baseImagePath: null,
+      overlayImagePath: null,
+      userInfo: {
+        ...olduserInfo
+      },
     });
   },
 
-  _saveUserInfo: function(userInfo = null) {
+  _saveUserInfo: function (userInfo = null) {
     if (userInfo == void 0) {
       wx.showToast({
         title: '获取微信账号信息失败，请重新授权！',
@@ -96,7 +162,7 @@ Page({
       const index = userInfo.avatarUrl.lastIndexOf('/132');
       if (index != -1) {
         userInfo.highAvatarUrl = userInfo.avatarUrl.substring(0, index) + '/0';
-      }else {
+      } else {
         userInfo.highAvatarUrl = userInfo.avatarUrl;
       }
     }
@@ -107,40 +173,45 @@ Page({
       currentFestival,
       festivalIndex,
     } = this.data;
+    console.info(`currentFestival: ${currentFestival}`)
     this.setData({
-      olduserInfo: { ...userInfo},
+      olduserInfo: {
+        ...userInfo
+      },
       userInfo: userInfo,
       hasUserInfo: userInfo != null,
-      festivalSrc: icons[currentFestival][festivalIndex].src,
+      festivalSrc: icons[currentFestival][festivalIndex].fullImageUrl,
     });
     this._showFestivalSwitchPrompt();
   },
 
-  onShareAppMessage: function(e) {
+  onShareAppMessage: function (e) {
     return {
-      title: '微信节日头像生成',
-      desc: '自动生成各种节日（国庆节，春节，元宵节...）图像，让我们为节日欢乐祝福吧',
+      title: '生成你的影响力头像',
+      desc: '快速生成你的影响力头像，传递自己的健康影响力，For a healthier world!',
       path: '/pages/index/index',
     };
   },
-  
-  _showFestivalSwitchPrompt: function() {
+
+  _showFestivalSwitchPrompt: function () {
     const {
       userInfo = {},
-      didShow,
+        didShow,
     } = this.data;
     if (!didShow && userInfo.highAvatarUrl != void 0) {
       setTimeout(() => {
         this.data.didShow = true;
+        /*
         wx.showToast({
-          title: '可以切换不同节日',
+          title: '可以切换不同主题',
           icon: 'none',
         });
+        */
       }, 1000);
     }
   },
 
-  onShow: function(e) {
+  onShow: function (e) {
     this._showFestivalSwitchPrompt();
   },
 
@@ -149,64 +220,37 @@ Page({
       festivalNames,
       icons,
     } = this.data;
-    festivalNames.forEach((v, i) => {
-      let len = 0;
-      let name = '';
-      switch(i) {
-        case 0: // 圣诞
-          len = 19;
-          name = 'shengdan';
-          break;
-        case 1: // 春节
-          len = 22;
-          name = 'year';
-          break;
-        case 2: // 元宵
-          len = 4;
-          name = '15';
-          break;
-        case 3: // 国庆
-          len = 9;
-          name = '101';
-          break;
-        case 4: // 1024
-          len = 3;
-          name = '1024';
-          break;
-        case 5: // 女神节
-          len = 2;
-          name = '38';
-          break;
-      }
-      icons[v] = [...Array(len)].map((v, i) => {
-        return {
-          src: `../images/${name}/${i + 1}.png`,
-          isselected: i == 0,
-        };
+    const self = this;
+    retrieveImages().then(allImagesData => {
+      allImagesData.forEach(catagorizedImages => {
+        festivalNames.push(catagorizedImages.catagory)
+        icons[catagorizedImages.catagory] = [];
+        catagorizedImages.images.forEach((image, index) => {
+          const thumbnailImageUrl = resourceBaseUrl + image.name + '_t.png';
+          const fullImageUrl = resourceBaseUrl + image.name + '_f.png';
+          icons[catagorizedImages.catagory].push({
+            thumbnailImageUrl,
+            fullImageUrl,
+            isselected: index == 0,
+          });
+        })
       });
-    });
-    this.setData({
-      icons,
-    });
-    if (app.globalData.userInfo) {
-      this._saveUserInfo(app.globalData.userInfo);
-    } else if (this.data.canIUse){
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
-      app.userInfoReadyCallback = res => {
-        this._saveUserInfo(res.userInfo);
+      console.info(JSON.stringify(icons))
+      self.setData({
+        icons,
+        festivalNames,
+        currentFestival: allImagesData[0].catagory
+      });
+      if (app.globalData.userInfo) {
+        console.info('User Info available')
+        self._saveUserInfo(app.globalData.userInfo);
+      } else {
+        console.info('Get user profile on load')
       }
-    } else {
-      // 在没有 open-type=getUserInfo 版本的兼容处理
-      wx.getUserInfo({
-        success: res => {
-          app.globalData.userInfo = res.userInfo
-          this._saveUserInfo(res.userInfo);
-        }
-      })
-    }
+    });
   },
 
+  /*
   getUserInfo: function(e) {
     const {
       userInfo = null
@@ -214,15 +258,16 @@ Page({
     if (userInfo != null) {
       app.globalData.userInfo = userInfo;
       this._saveUserInfo(userInfo);
-    }else {
+    } else {
       wx.showToast({
         title: e.detail.errMsg,
         icon: 'none'
       });
     }
   },
+  */
 
-  onChangePickerFestival: function(e) {
+  onChangePickerFestival: function (e) {
     const {
       icons,
       festivalNames,
@@ -238,19 +283,19 @@ Page({
       festivalIndex: index,
       festivalImageIndex: 0,
       currentFestival: name,
-      festivalSrc: icons[name][0].src,
+      festivalSrc: icons[name][0].fullImageUrl,
       icons,
     });
   },
 
-  clickCancelOpenSetting: function(e) {
+  clickCancelOpenSetting: function (e) {
     this.setData({
       isOpenSetting: false,
       callback: null,
     });
   },
 
-  handlerOpenSetting: function(e) {
+  handlerOpenSetting: function (e) {
     if (e.detail.authSetting['scope.writePhotosAlbum'] == true) {
       const {
         callback = null,
@@ -263,7 +308,7 @@ Page({
     }
   },
 
-  clickChangeAvatarImage: function(e) {
+  clickChangeAvatarImage: function (e) {
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
@@ -278,10 +323,10 @@ Page({
               userInfo.highAvatarUrl = img;
               userInfo.avatarUrl = img;
               this.setData({
-                logoPath: img,
+                baseImagePath: img,
                 userInfo,
               });
-            }else {
+            } else {
               wx.showToast({
                 title: '请选择高清图像尺寸至少200x200以上！',
                 icon: 'none',
@@ -291,7 +336,7 @@ Page({
           wx.navigateTo({
             url: `../edit/edit?imageurl=${res.tempFilePaths[0]}`,
           });
-        }else {
+        } else {
           wx.showToast({
             title: res.errMsg,
             icon: 'none'
@@ -311,7 +356,7 @@ Page({
             success() {
               callback && callback(true);
             },
-            fail() { 
+            fail() {
               console.log("2-授权《保存图片》权限失败");
               self.setData({
                 callback,
@@ -331,16 +376,16 @@ Page({
     });
   },
 
-  clickMakeResetImage: function(e) {
+  clickMakeResetImage: function (e) {
     this._reset();
   },
 
-  clickMakePoster: function(e) {
+  clickMakePoster: function (e) {
     this.data.makePosterImage = true;
     this.clickMakeNewImage(e);
   },
 
-  clickFestivalImage: function(e) {
+  clickFestivalImage: function (e) {
     if (this.data.loading) {
       return;
     }
@@ -356,47 +401,51 @@ Page({
     this.setData({
       icons,
       festivalImageIndex: index,
-      festivalSrc: icons[currentFestival][index].src,
+      festivalSrc: icons[currentFestival][index].fullImageUrl,
     });
   },
 
-  clickMakeNewImage: function(e) {
+  clickMakeNewImage: function (e) {
     if (this.data.loading) {
       return;
     }
+    const self = this;
     this._checkPhotosAlbum((isok) => {
       if (isok == false) {
-        this.data.makePosterImage = false;
+        self.data.makePosterImage = false;
         return;
       }
-      this.setData({
+      self.setData({
         loading: true,
       });
       wx.showLoading({
         title: '生成中...',
       });
-      if (this.data.logoPath == null) {
-        wx.downloadFile({
-          url: this.data.userInfo.highAvatarUrl,
-          success: (res) => {
-            this.data.logoPath = res.tempFilePath;
-            this._saveImage();
-          },
-          fail: (res) => {
-            this.data.loading = false;
-            wx.showToast({
-              title: '获取微信图像失败',
-              icon: 'none'
-            });
-          },
-        });
-      }else {
-        this._saveImage();
+
+      if (self.data.baseImagePath == null || self.data.overlayImagePath == null) {
+        const getBaseImagePromise = self.data.baseImagePath == null ?
+          downloadAsTempFile(self.data.userInfo.highAvatarUrl) : Promise.resolve(self.data.baseImagePath);
+        const getOverlayPromise = self.data.overlayImagePath == null ?
+          downloadAsTempFile(self.data.festivalSrc) : Promise.resolve(self.data.overlayImagePath);
+        Promise.all([getBaseImagePromise, getOverlayPromise]).then(res => {
+          self.data.baseImagePath = res[0];
+          self.data.overlayImagePath = res[1];
+          self._saveImage();
+        }).catch((err) => {
+          console.error(err);
+          self.data.loading = false;
+          wx.showToast({
+            title: '获取图像失败.',
+            icon: 'none'
+          });
+        })
+      } else {
+        self._saveImage();
       }
     });
   },
 
-  _saveImage: function() {
+  _saveImage: function () {
     const {
       makePosterImage,
       festivalLeft,
@@ -404,10 +453,11 @@ Page({
       festivalSize,
       festivalSrc = '',
       rotate,
-      logoPath = '',
+      baseImagePath = '',
+      overlayImagePath = '',
       festivalIndex,
     } = this.data;
-    if (festivalSrc == '' || logoPath == '') {
+    if (baseImagePath == '' || overlayImagePath == '') {
       wx.showToast({
         title: '程序异常，请联系作者',
         icon: 'none',
@@ -416,25 +466,20 @@ Page({
     }
     const imageSynthesis = new ImageSynthesis(this, 'festivalCanvas', 700, 700);
     imageSynthesis.addImage({
-      path:logoPath, 
-      x:0, 
-      y:0, 
-      w:700,
-      h:700
+      path: baseImagePath,
+      x: 0,
+      y: 0,
+      w: 700,
+      h: 700
     });
-    const rc = imageSynthesis.switchRect({
-      x: festivalLeft,
-      y: festivalTop,
-      w: festivalSize,
-      h: festivalSize,
-    });
+
     imageSynthesis.addImage({
-      path:festivalSrc, 
-      x:rc.x, 
-      y:rc.y, 
-      w:rc.w, 
-      h:rc.h, 
-      deg:rotate
+      path: overlayImagePath,
+      x: 0,
+      y: 0,
+      w: 700,
+      h: 700,
+      deg: rotate
     });
     imageSynthesis.startCompound((img) => {
       if (img != void 0) {
@@ -446,13 +491,13 @@ Page({
           wx.navigateTo({
             url: `../poster/poster?type=${festivalIndex}`
           });
-        }else {
+        } else {
           wx.saveImageToPhotosAlbum({
             filePath: img,
             success: (res) => {
               this.data.loading = false;
               wx.showToast({
-                title: '保存到相册成功',
+                title: '已保存至系统相册:)',
               });
             },
             fail: (res) => {
@@ -468,10 +513,10 @@ Page({
     });
   },
 
-  _getCurrentPointXiangxian: function(x = 0, y = 0) {
+  _getCurrentPointXiangxian: function (x = 0, y = 0) {
     const {
       festivalCenterX = 0,
-      festivalCenterY = 0,
+        festivalCenterY = 0,
     } = this.data;
     if (x >= festivalCenterX && y <= festivalCenterY) {
       return 1;
@@ -487,53 +532,53 @@ Page({
     }
   },
 
-  _switchPoint: function(x = 0, y = 0) {
+  _switchPoint: function (x = 0, y = 0) {
     const xx = this._getCurrentPointXiangxian(x, y);
     const {
       festivalCenterX,
       festivalCenterY,
     } = this.data;
-    switch(xx) {
+    switch (xx) {
       case 1:
         return {
           x: x - festivalCenterX,
-          y: festivalCenterY - y,
+            y: festivalCenterY - y,
         };
       case 2:
         return {
           x: x - festivalCenterX,
-          y: festivalCenterY - y,
+            y: festivalCenterY - y,
         };
       case 3:
         return {
           x: x - festivalCenterX,
-          y: festivalCenterY - y,
+            y: festivalCenterY - y,
         };
       case 4:
         return {
           x: x - festivalCenterX,
-          y: festivalCenterY - y,
+            y: festivalCenterY - y,
         };
       default:
         return null;
     }
   },
 
-  _handlefestivalImageMoveScale: function(e) {
+  _handlefestivalImageMoveScale: function (e) {
     if (e.touches.length > 0) {
       const {
         oldx = 0,
-        oldy = 0,
-        festivalCenterX = 0,
-        festivalCenterY = 0,
-        startx = 0,
-        starty = 0,
-        initRotate = 0,
-        hasRotate,
-        hasScale,
-        offsety,
-        offsetx,
-        rotate,
+          oldy = 0,
+          festivalCenterX = 0,
+          festivalCenterY = 0,
+          startx = 0,
+          starty = 0,
+          initRotate = 0,
+          hasRotate,
+          hasScale,
+          offsety,
+          offsetx,
+          rotate,
       } = this.data;
       const x = e.touches[0].pageX;
       const y = e.touches[0].pageY;
@@ -557,7 +602,7 @@ Page({
             oldx: x,
             oldy: y,
           });
-        }else {
+        } else {
           this.setData({
             festivalTop: festivalCenterY - newsize / 2.0,
             festivalLeft: festivalCenterX - newsize / 2.0,
@@ -577,7 +622,7 @@ Page({
     }
   },
 
-  festivalImageTouchStart: function(e){
+  festivalImageTouchStart: function (e) {
     if (this.data.isTouchScale) {
       return;
     }
@@ -607,14 +652,14 @@ Page({
     this._handlefestivalImageMoveScale(e);
   },
 
-  festivalImageTouchEnd: function(e) {
+  festivalImageTouchEnd: function (e) {
     if (this.data.isTouchScale) {
       return;
     }
     this._handlefestivalImageMoveScale(e);
   },
 
-  festivalImageRaoteTouchStart: function(e) {
+  festivalImageRaoteTouchStart: function (e) {
     this.data.isTouchScale = true;
     this.data.initRotate = this.data.rotate;
     const x = e.touches[0].pageX;
@@ -631,11 +676,11 @@ Page({
     this.data.offsety = y - this.data.festivalTop;
   },
 
-  festivalImageRaoteTouchMove: function(e) {
+  festivalImageRaoteTouchMove: function (e) {
     this._handlefestivalImageMoveScale(e);
   },
 
-  festivalImageRaoteTouchEnd: function(e) {
+  festivalImageRaoteTouchEnd: function (e) {
     this._handlefestivalImageMoveScale(e);
     this.data.isTouchScale = false;
   },

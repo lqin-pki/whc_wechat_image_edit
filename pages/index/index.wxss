@@ -1,5 +1,10 @@
 /**index.wxss**/
 
+.home-logo {
+  width: 100px;
+  margin-bottom: 80px;
+}
+
 .userinfo {
   position: fixed;
   height: 100%;
@@ -41,6 +46,9 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  top: 0;
+  width: 320px;
+  height: 320px;
   /* border:1px dashed rgb(153, 51, 90); */
   /* background-image: linear-gradient(to right, rgb(153, 51, 90) 0%, rgb(153, 51, 90) 50%, transparent 50%);
   background-size: 20px 1px; */
@@ -117,14 +125,14 @@
   width: 320px;
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 7px;
+  justify-content: left;
+  align-items: left;
+  margin: 0px;
   height: 40px;
 }
 
 .userinfo-jieributton {
-  background-color: rgb(153, 51, 90);
+  background-color: rgb(169, 0, 97);
   color: white;
   font-size: 14px;
   margin: 0px;
@@ -136,10 +144,10 @@
 
 .userinfo-makebutton {
   font-size: 14px;
-  background-color: rgb(153, 51, 90);
+  background-color: rgb(0, 85, 166);
   color: white;
   margin: 0px;
-  padding: 0px;
+  padding: 5px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -147,7 +155,7 @@
 
 .userinfo-haibaobutton {
   font-size: 14px;
-  background-color: rgb(153, 51, 90);
+  background-color: rgb(169, 0, 97);
   color: white;
   margin: 0px;
   padding: 0px;

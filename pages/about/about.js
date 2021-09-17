@@ -12,54 +12,27 @@ Page({
    */
   data: {
     titles: [
-      '小程序作者：吴海超',
-      '意见反馈添加微信：whc66888',
-      '个人网站：http://www.wuhaichao.com',
-      'github：https://github.com/netyouli',
-      '小程序版本：v1.0.3',
+      '为 #ImpactDayPKI 特制',
+      '24小时快速制作，经不起测试 :(',
+      '基于开源项目(whc_wechat_image_edit)',
+      '源代码开源协议: Apache-2.0 License',
+      '原作者：吴海超',
+      '原作者微信：whc66888',
+      '原作者个人网站：http://www.wuhaichao.com',
+      '原小程序版本：v1.0.3',
+      '修订版本: v0.1.3',
+      '修改人: Leon Qin, PerkinElmer Informatics',
+      'Innovating for a healthier world!'
     ],
   },
 
   clickItem: function(e) {
     const index = e.currentTarget.dataset.index;
     switch (index) {
-      case 1:
-        wx.setClipboardData({
-          data: 'whc66888',
-          success: (res) => {
-            wx.showToast({
-              title: '复制成功',
-            });
-          }
-        });
-      break;
-      case 2:
-        wx.setClipboardData({
-          data: 'http://www.wuhaichao.com',
-          success: (res) => {
-            wx.showToast({
-              title: '复制成功',
-            });
-          }
-        });
-        break;
-      case 3:
-        wx.setClipboardData({
-          data: 'https://github.com/netyouli',
-          success: (res) => {
-            wx.showToast({
-              title: '复制成功',
-            });
-          }
-        });
-        break;
       default:
+        // Do nothing for now.
       break;
     }
-  },
-
-  clickContactWe: function(e) {
-
   },
 
   /**
@@ -111,8 +84,8 @@ Page({
    */
   onShareAppMessage: function () {
     return {
-      title: '微信节日头像生成',
-      desc: '自动生成各种节日（国庆节，春节，元宵节...）图像，让我们为节日欢乐祝福吧',
+      title: '生成你的影响力头像',
+      desc: '快速生成你的影响力头像，传递自己的健康影响力，For a healthier world!',
       path: '/pages/index/index',
       imageUrl: app.globalData.userInfo.highAvatarUrl,
     };

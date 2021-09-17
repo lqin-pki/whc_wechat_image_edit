@@ -1,0 +1,43 @@
+[
+    {
+        "catagory": "ImpactDay",
+        "images": [
+            {
+                "name": "pubtrans",
+                "description": "乘坐公共交通"
+            },
+            {
+                "name": "nosmoking",
+                "description": "不吸烟"
+            },
+            {
+                "name": "bicycle",
+                "description": "骑行"
+            },
+            {
+                "name": "unplug",
+                "description": "拔掉插头"
+            },
+            {
+                "name": "noplastic",
+                "description": "减少塑料一次性用品"
+            },
+            {
+                "name": "savewater",
+                "description": "节约用水"
+            },
+            {
+                "name": "recycle",
+                "description": "垃圾分类"
+            },
+            {
+                "name": "fastcode",
+                "description": "优化代码"
+            },
+            {
+                "name": "steps",
+                "description": "多爬楼梯少坐电梯"
+            }
+        ]
+    }
+]

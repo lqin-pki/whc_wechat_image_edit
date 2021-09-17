@@ -222,8 +222,8 @@ Page({
    */
   onShareAppMessage: function () {
     return {
-      title: '微信节日头像生成',
-      desc: '自动生成各种节日（国庆节，春节，元宵节...）图像，让我们为节日欢乐祝福吧',
+      title: '生成你的影响力头像',
+      desc: '快速生成你的影响力头像，传递自己的健康影响力，For a healthier world!',
       path: '/pages/index/index',
       imageUrl: app.globalData.userInfo.highAvatarUrl,
     };

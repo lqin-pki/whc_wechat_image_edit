@@ -75,6 +75,6 @@
 .clipButton {
   position: absolute;
   bottom: 30px;
-  background: rgb(153, 51, 90);
+  background: rgb(169, 0, 97);
   color: white;
 }

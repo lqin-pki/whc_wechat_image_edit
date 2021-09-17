@@ -1,58 +1,42 @@
 <!--index.wxml-->
 <view class="userinfo">
   <canvas class="userinfo-canvas" canvas-id="festivalCanvas"></canvas>
-  <view wx:if="{{!hasUserInfo && canIUse}}" class="userinfo-topview" >
-    <button class="userinfo-makebutton" open-type="getUserInfo" bindgetuserinfo="getUserInfo" style="width: 60%;"> 开始制作个性节日图像 </button>
+  <view wx:if="{{!hasUserInfo }}" class="userinfo-topview" >
+    <image class="home-logo" src="../images/home-logo.png" mode="widthFix"></image>
+    <button class="userinfo-makebutton" open-type="getUserProfile" bindtap="getUserProfile" > 开始制作你的影响力头像 </button>
   </view>
   <block wx:else>
     <view class="userinfo-imageview">
-      <image class="userinfo-avatar" src="{{userInfo.highAvatarUrl}}" mode="widthFix" bindtap="clickChangeAvatarImage"></image>
-      <view style="transform:rotate({{rotate}}deg); height:{{festivalSize}}px; width:{{festivalSize}}px; left:{{festivalLeft}}px; top:{{festivalTop}}px"
-        class="userinfo-festivalview"
-        catchtouchstart="festivalImageTouchStart" 
-        catchtouchmove="festivalImageTouchMove"
-        catchtouchend="festivalImageTouchEnd"
-        >
-        <view class="userinfo-festivalview-topline"/>
-        <view class="userinfo-festivalview-leftline"/>
-        <view class="userinfo-festivalview-rightline"/>
-        <view class="userinfo-festivalview-bottomline"/>
+      <image class="userinfo-avatar" src="{{userInfo.highAvatarUrl}}" mode="widthFix"></image>
+      <view class="userinfo-festivalview">
         <image 
           class="userinfo-festivalimage"
           mode="aspectFit"
           src="{{festivalSrc}}"
         />
-        <image class="userinfo-festivalrotate"
-         mode="aspectFit"
-         src="../images/icon_rotate.png"
-         style="transform:rotate({{-rotate}}deg) scale({{1.0 / festivalScale}});"
-         catchtouchstart="festivalImageRaoteTouchStart" 
-         catchtouchmove="festivalImageRaoteTouchMove"
-         catchtouchend="festivalImageRaoteTouchEnd"
-         />
       </view>
     </view>
     <view class="userinfo-buttonview">
       <picker bindchange="onChangePickerFestival" mode="selector" value="{{festivalIndex}}" range="{{festivalNames}}">
-      <view>
-        <button class="userinfo-jieributton" style="width: 100px; height: 35px;">节日: {{currentFestival}}</button>
+      <view style="margin-right: 20px">
+        <button class="userinfo-jieributton" style="width: 110px; height: 35px;">主题: {{currentFestival}}</button>
       </view>
       </picker>
-      <view>
-        <button class="userinfo-makebutton" style="width: 50px; height: 35px;" bindtap="clickMakeNewImage">保存</button>
+      <view style="margin-right: 4px">
+        <button class="userinfo-makebutton" style="width: 46px; height: 35px;" bindtap="clickMakeNewImage">保存</button>
+      </view>
+      <view style="margin-right: 4px">
+        <button class="userinfo-makebutton" style="width: 46px; height: 35px;" bindtap="clickMakeResetImage">重置</button>
       </view>
       <view>
-        <button class="userinfo-makebutton" style="width: 50px; height: 35px;" bindtap="clickMakeResetImage">重置</button>
-      </view>
-      <view>
-        <button class="userinfo-haibaobutton" style="width: 100px; height: 35px;" bindtap="clickMakePoster">制作海报</button>
+        <button class="userinfo-makebutton" style="width: 90px; height: 35px;" bindtap="clickChangeAvatarImage">从图库选择</button>
       </view>
     </view>
     <view class="userinfo-bottomview">
       <scroll-view class="scrollview" scroll-y="true" enable-flex="true">
       <view class="scrollview-view">
         <view class="scrollview-item" wx:for="{{icons[currentFestival]}}" wx:key="key" data-index="{{index}}" style="background:{{item.isselected ? '#eee' : '#fff'}}; margin-right:{{(index + 1) % 4 == 0 ? 0 : 26.666}}px;" bindtap="clickFestivalImage">
-          <image src="{{item.src}}" mode="aspectFit"/>
+          <image src="{{item.thumbnailImageUrl}}" mode="aspectFit"/>
         </view>
       </view>
       </scroll-view>
